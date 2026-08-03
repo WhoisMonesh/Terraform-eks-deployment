@@ -64,6 +64,16 @@ The repository layout mirrors the KodeKloud course:
     terraform init
     ```
 
+    > **AWS CloudShell only**: CloudShell's home partition is too small to hold the Terraform providers, so `terraform init` may fail with `no space left on device`. Work around it by pointing Terraform's data directory to the larger `/tmp` partition:
+    >
+    > ```bash
+    > mkdir -p /tmp/tfdata
+    > export TF_DATA_DIR=/tmp/tfdata
+    > terraform init
+    > ```
+    >
+    > You must keep `TF_DATA_DIR` exported for every subsequent `terraform` command in the same session (or re-export it each time).
+
 1. Plan the deployment
 
     ```bash
