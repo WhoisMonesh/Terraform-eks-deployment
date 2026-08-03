@@ -59,11 +59,11 @@ if ($IGW_ID -eq "None") {
 Write-Host "- Default VPC $VPC_ID has an Internet Gateway: $IGW_ID" -ForegroundColor Green
 
 # Check for the cluster service role being present and flag terraform accordingly.
-if (aws iam get-role --role-name "Monesh-Eks-Cluster-Role" 2>$null) {
-    Write-Host "- Using pre-existing role Monesh-Eks-Cluster-Role" -ForegroundColor Green
+if (aws iam get-role --role-name "eksClusterRole" 2>$null) {
+    Write-Host "- Using pre-existing role eksClusterRole" -ForegroundColor Green
     $env:TF_VAR_use_predefined_role = "true"
 } else {
-    Write-Host "- Cluster role Monesh-Eks-Cluster-Role not present; Terraform will create it." -ForegroundColor Yellow
+    Write-Host "- Cluster role eksClusterRole not present; Terraform will create it." -ForegroundColor Yellow
     $env:TF_VAR_use_predefined_role = "false"
 }
 

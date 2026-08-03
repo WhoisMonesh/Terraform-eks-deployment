@@ -33,7 +33,7 @@ output "cluster_role_arn" {
 }
 
 output "jump_server_iam_role_arn" {
-  value = aws_iam_role.jump_server_role.arn
+  value = aws_iam_role.node_instance_role.arn
 }
 
 output "jump_server_public_ips" {

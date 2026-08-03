@@ -1,18 +1,16 @@
 ####################################################################
 #
-# Creates a security group, IAM role and EC2 instances that act
-# as jump / bastion servers with kubectl access to the cluster.
+# Creates a security group and EC2 instances that act as jump /
+# bastion servers with kubectl access to the cluster.
+#
+# The jump servers reuse the worker node IAM role and instance
+# profile, because the KodeKloud playground only permits PassRole
+# on the course role (eksWorkerNodeRole).
 #
 ####################################################################
 
-# IAM role assumed by the jump server instances
-resource "aws_iam_role" "jump_server_role" {
-  name               = var.jump_server_role_name
-  assume_role_policy = data.aws_iam_policy_document.assume_role_ec2.json
-  path               = "/"
-}
-
-# Allow the jump server to reach the EKS API so kubectl can authenticate
+# Allow the jump server to reach the EKS API so kubectl can authenticate.
+# This policy is attached to the shared worker node role.
 resource "aws_iam_policy" "jump_server_policy" {
   name        = "MoneshJumpServerPolicy"
   path        = "/"
@@ -37,20 +35,7 @@ resource "aws_iam_policy" "jump_server_policy" {
 
 resource "aws_iam_role_policy_attachment" "jump_server_cluster_access" {
   policy_arn = aws_iam_policy.jump_server_policy.arn
-  role       = aws_iam_role.jump_server_role.name
-}
-
-# Allow instance metadata (SSM not strictly required, but useful for maintenance)
-resource "aws_iam_role_policy_attachment" "jump_server_SSMMIC" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  role       = aws_iam_role.jump_server_role.name
-}
-
-# Instance profile to assign the role to the jump server instances
-resource "aws_iam_instance_profile" "jump_server_profile" {
-  name = "MoneshJumpServerInstanceProfile"
-  path = "/"
-  role = aws_iam_role.jump_server_role.id
+  role       = aws_iam_role.node_instance_role.name
 }
 
 # Security group for the jump servers
@@ -101,7 +86,7 @@ resource "aws_instance" "jump_server" {
   subnet_id              = data.aws_subnets.public.ids[count.index]
   key_name               = aws_key_pair.eks_kp.key_name
   vpc_security_group_ids = [aws_security_group.jump_server_sg.id]
-  iam_instance_profile   = aws_iam_instance_profile.jump_server_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.node_instance_profile.name
   associate_public_ip_address = true
 
   depends_on = [

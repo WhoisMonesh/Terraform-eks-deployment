@@ -3,7 +3,7 @@
 Deploys an Amazon EKS cluster named **Monesh-Eks-Cluster** following the same workflow as the [KodeKloud Amazon EKS course](https://learn.kodekloud.com/user/courses/aws-eks).
 
 - EKS control plane with an *unmanaged* node group (deployed and joined manually, like the course)
-- IAM roles named after the owner: `Monesh-Eks-Cluster-Role`, `Monesh-Eks-Worker-Role`, `Monesh-Eks-Policy`, `Monesh-Jump-Server-Role`
+- IAM roles use the KodeKloud course names (`eksClusterRole`, `eksWorkerNodeRole`, `eksPolicy`) because the playground only allows `PassRole` on those roles
 - **Two jump servers (bastions)** `Monesh-Jump-Server-1` / `Monesh-Jump-Server-2` with `kubectl` access to the cluster
 - Load balancer + EBS CSI permissions policy for worker nodes
 - AWS LoadBalancer controller + sample 2048 game manifests under `resources/loadbalancer`

@@ -4,7 +4,7 @@
 variable "cluster_role_name" {
   type        = string
   description = "Name of the cluster role"
-  default     = "Monesh-Eks-Cluster-Role"
+  default     = "eksClusterRole"
 }
 
 variable "additional_policy_arns" {

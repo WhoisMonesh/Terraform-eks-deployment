@@ -76,11 +76,11 @@ fi
 echo -e "${GREEN}- Default VPC $VPC_ID has an Internet Gateway: ${IGW_ID}${NC}"
 
 # Check for the cluster service role being present and flag terraform accordingly.
-if aws iam get-role --role-name Monesh-Eks-Cluster-Role > /dev/null 2>&1 ; then
-    echo -e "${GREEN}- Using pre-existing role Monesh-Eks-Cluster-Role${NC}"
+if aws iam get-role --role-name eksClusterRole > /dev/null 2>&1 ; then
+    echo -e "${GREEN}- Using pre-existing role eksClusterRole${NC}"
     export TF_VAR_use_predefined_role=true
 else
-    echo -e "${YELLOW}- Cluster role Monesh-Eks-Cluster-Role not present; Terraform will create it.${NC}"
+    echo -e "${YELLOW}- Cluster role eksClusterRole not present; Terraform will create it.${NC}"
     export TF_VAR_use_predefined_role=false
 fi
 

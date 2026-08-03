@@ -24,11 +24,12 @@ variable "cluster_version" {
   default     = "1.31"
 }
 
-# Cluster IAM service role name
+# Cluster IAM service role name. The KodeKloud playground only allows
+# PassRole on the course role names.
 variable "cluster_role_name" {
   type        = string
   description = "Name of the EKS cluster service role"
-  default     = "Monesh-Eks-Cluster-Role"
+  default     = "eksClusterRole"
 }
 
 # This variable is initialized as an environment variable source
@@ -39,25 +40,19 @@ variable "use_predefined_role" {
   default     = false
 }
 
-# Worker node IAM role name
+# Worker node IAM role name. The KodeKloud playground only allows
+# PassRole on the course role names.
 variable "node_role_name" {
   type        = string
   description = "Name of the worker node IAM role"
-  default     = "Monesh-Eks-Worker-Role"
+  default     = "eksWorkerNodeRole"
 }
 
 # IAM policy created for load balancer / EBS CSI permissions
 variable "additional_policy_name" {
   type        = string
   description = "Name of IAM policy created for additional permissions"
-  default     = "Monesh-Eks-Policy"
-}
-
-# Jump server (bastion) IAM role name
-variable "jump_server_role_name" {
-  type        = string
-  description = "Name of the IAM role assumed by the jump servers"
-  default     = "Monesh-Jump-Server-Role"
+  default     = "eksPolicy"
 }
 
 # Number of jump servers to create
