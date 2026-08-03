@@ -1,0 +1,10 @@
+# Local-only / temporary files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.pem
+*.log
+
+# Crash reports
+crash.log
