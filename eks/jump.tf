@@ -108,7 +108,7 @@ resource "aws_instance" "jump_server" {
     aws_eks_access_policy_association.jump_server_admin
   ]
 
-  user_data = base64encode(<<EOF
+  user_data_base64 = base64encode(<<EOF
     #!/bin/bash
     set -o xtrace
 
