@@ -155,7 +155,7 @@ The repository layout mirrors the KodeKloud course:
 
 ## Connect from the jump servers
 
-The two jump servers are granted cluster admin access via EKS access entries, so once the cluster is up you can manage it from either one.
+The two jump servers share the `eksWorkerNodeRole` IAM role. Once you have applied the aws-auth ConfigMap above, the worker nodes (and the jump servers) can authenticate to the cluster, so `kubectl get nodes` works from either jump server.
 
 ```bash
 ssh -i ~/.ssh/eks-monesh.pem ec2-user@<jump-server-public-ip>

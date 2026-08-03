@@ -89,10 +89,6 @@ resource "aws_instance" "jump_server" {
   iam_instance_profile   = aws_iam_instance_profile.node_instance_profile.name
   associate_public_ip_address = true
 
-  depends_on = [
-    aws_eks_access_policy_association.jump_server_admin
-  ]
-
   user_data_base64 = base64encode(<<EOF
     #!/bin/bash
     set -o xtrace
