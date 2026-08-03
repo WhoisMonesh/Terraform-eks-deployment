@@ -4,6 +4,18 @@
 #
 ####################################################################
 
+output "NodeInstanceRole" {
+  value = aws_iam_role.node_instance_role.arn
+}
+
+output "NodeSecurityGroup" {
+  value = aws_security_group.node_security_group.id
+}
+
+output "NodeAutoScalingGroup" {
+  value = aws_cloudformation_stack.autoscaling_group.outputs["NodeAutoScalingGroup"]
+}
+
 output "cluster_name" {
   value = aws_eks_cluster.monesh_eks.name
 }
@@ -17,15 +29,7 @@ output "cluster_certificate_authority" {
 }
 
 output "cluster_role_arn" {
-  value = aws_iam_role.cluster_role.arn
-}
-
-output "node_instance_role_arn" {
-  value = aws_iam_role.node_instance_role.arn
-}
-
-output "node_autoscaling_group" {
-  value = aws_cloudformation_stack.autoscaling_group.outputs["NodeAutoScalingGroup"]
+  value = var.use_predefined_role ? module.use_eksClusterRole[0].eksClusterRole_arn : module.create_eksClusterRole[0].eksClusterRole_arn
 }
 
 output "jump_server_iam_role_arn" {

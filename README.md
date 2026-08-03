@@ -1,103 +1,213 @@
 # Terraform EKS Deployment
 
-Deploys an Amazon EKS cluster named **Monesh-Eks-Cluster** with:
+Deploys an Amazon EKS cluster named **Monesh-Eks-Cluster** following the same workflow as the [KodeKloud Amazon EKS course](https://learn.kodekloud.com/user/courses/aws-eks).
 
-- **EKS control plane** (self-managed / unmanaged node group, course style)
+- EKS control plane with an *unmanaged* node group (deployed and joined manually, like the course)
 - IAM roles named after the owner: `Monesh-Eks-Cluster-Role`, `Monesh-Eks-Worker-Role`, `Monesh-Eks-Policy`, `Monesh-Jump-Server-Role`
-- **Two jump servers (bastions)** that automatically install `kubectl` + AWS CLI and are granted cluster admin via EKS access entries, so `kubectl get nodes` works from either server
+- **Two jump servers (bastions)** `Monesh-Jump-Server-1` / `Monesh-Jump-Server-2` with `kubectl` access to the cluster
 - Load balancer + EBS CSI permissions policy for worker nodes
+- AWS LoadBalancer controller + sample 2048 game manifests under `resources/loadbalancer`
 
-## Prerequisites
+The repository layout mirrors the KodeKloud course:
 
-- AWS CLI configured with credentials in `us-east-1`
-- Terraform >= 1.3
-- A default VPC in the region with public subnets in AZs `a`, `b`, `c` and an internet gateway
-
-## Step-by-step deployment
-
-Run these commands in order. They assume you have an IAM user with `AdministratorAccess` (or at least EKS + EC2 + IAM + CloudFormation permissions).
-
-### 1. Clone the repo
-
-```bash
-git clone https://github.com/WhoisMonesh/Terraform-eks-deployment.git
-cd Terraform-eks-deployment
+```
+├── eks/                          # All Terraform configuration
+│   ├── check-environment.sh      # Pre-flight checks (Linux/Mac/CloudShell)
+│   ├── check-environment.ps1     # Pre-flight checks (Windows PowerShell)
+│   ├── modules/
+│   │   ├── create-service-role/  # Creates the EKS service role
+│   │   └── use-service-role/     # Reuses an existing EKS service role
+│   └── *.tf                      # Terraform resources
+└── resources/loadbalancer/       # LoadBalancer controller + test app manifests
 ```
 
-### 2. Configure AWS credentials (one time)
+## Deploying the Cluster
 
-```bash
-aws configure
-# Access Key ID, Secret Access Key, region = us-east-1, output = json
-```
+**IMPORTANT**: Ensure that all resources are created in the `us-east-1` (N. Virginia) region.
 
-Verify you're authenticated:
+1. Clone the repository
 
-```bash
-aws sts get-caller-identity
-```
+    ```bash
+    git clone https://github.com/WhoisMonesh/Terraform-eks-deployment
+    ```
 
-### 3. Deploy the cluster
+1. Navigate to the EKS directory
 
-```bash
-terraform init
-terraform apply -auto-approve
-```
+    ```bash
+    cd Terraform-eks-deployment/eks
+    ```
 
-What this creates:
+1. Configure AWS credentials (first time only)
 
-- EKS cluster `Monesh-Eks-Cluster` (control plane, no worker nodes yet)
-- Worker node IAM role + security groups + launch template
-- Autoscaling group with `t3.medium` worker nodes (desired 2)
-- Two jump servers `Monesh-Jump-Server-1` and `Monesh-Jump-Server-2`
-- IAM roles: `Monesh-Eks-Cluster-Role`, `Monesh-Eks-Worker-Role`, `Monesh-Jump-Server-Role`
+    ```bash
+    aws configure
+    # Access Key ID, Secret Access Key, region = us-east-1, output = json
+    ```
 
-The apply also generates an SSH keypair and saves the private key to `~/.ssh/eks-monesh.pem` (chmod 600).
+1. Run the environment check. It verifies the region, default VPC, internet gateway and pre-existing roles, and sets the Terraform variables accordingly.
 
-> Note: full deployment takes roughly **8-15 minutes** (cluster creation + node bootstrapping).
+    * If you are running from a **Windows PowerShell** terminal, run
 
-### 4. Check the outputs
+        ```text
+        .\check-environment.ps1
+        ```
 
-```bash
-terraform output
-```
+    * **Otherwise** (KodeKloud lab terminal, CloudShell, any Linux or Mac), run
 
-### 5. Confirm the cluster is up
+        ```bash
+        source check-environment.sh
+        ```
 
-```bash
-aws eks update-kubeconfig --region us-east-1 --name Monesh-Eks-Cluster
-kubectl get nodes
-```
+1. Initialize Terraform
 
-You should see 2 worker nodes in `Ready` state (it takes a few minutes for the nodes to join).
+    ```bash
+    terraform init
+    ```
 
-## Connect to the cluster
+1. Plan the deployment
 
-From either jump server (SSH from the machine whose public IP matches your current IP):
+    ```bash
+    terraform plan
+    ```
+
+1. Apply the configuration. This creates the EKS control plane and the autoscaling group with worker nodes. This step can take up to 10 minutes.
+
+    ```bash
+    terraform apply
+    ```
+
+    When prompted, type `yes` to confirm.
+
+1. Retrieve the outputs
+
+    ```bash
+    terraform output
+    ```
+
+    Note the `NodeInstanceRole`, `NodeAutoScalingGroup`, `NodeSecurityGroup` and the two `jump_server_public_ips`. The `NodeInstanceRole` value is needed in the next step to join the worker nodes.
+
+    The apply also generates an SSH keypair and saves the private key to `~/.ssh/eks-monesh.pem` (chmod 600).
+
+## Set up access and join nodes
+
+1. Create a KUBECONFIG for `kubectl`
+
+    ```bash
+    aws eks update-kubeconfig --region us-east-1 --name Monesh-Eks-Cluster
+    ```
+
+1. Join the worker nodes
+
+    1. Download the node authentication ConfigMap
+
+        ```bash
+        curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/aws-auth-cm.yaml
+        ```
+
+    1. Edit the ConfigMap YAML and add the `NodeInstanceRole` obtained from Terraform
+
+        ```bash
+        vi aws-auth-cm.yaml
+        ```
+
+        Replace the placeholder text `<ARN of instance role (not instance profile)>` with the value of `NodeInstanceRole`:
+
+        ```yaml
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: aws-auth
+          namespace: kube-system
+        data:
+          mapRoles: |
+            - rolearn: <ARN of instance role (not instance profile)> # <- EDIT THIS
+              username: system:node:{{EC2PrivateDNSName}}
+              groups:
+                - system:bootstrappers
+                - system:nodes
+        ```
+
+    1. Apply the edited ConfigMap
+
+        ```bash
+        kubectl apply -f aws-auth-cm.yaml
+        ```
+
+1. Wait around 60 seconds for the nodes to join.
+
+1. Verify the nodes
+
+    ```bash
+    kubectl get node -o wide
+    ```
+
+    You should see the worker nodes in `Ready` state. Note that with EKS you do not see control plane nodes, as they are managed by AWS.
+
+## Connect from the jump servers
+
+The two jump servers are granted cluster admin access via EKS access entries, so once the cluster is up you can manage it from either one.
 
 ```bash
 ssh -i ~/.ssh/eks-monesh.pem ec2-user@<jump-server-public-ip>
 kubectl get nodes
 ```
 
-Or from your local machine (needs `kubectl` + `aws` CLI, and an IAM identity that is cluster admin, e.g. the one that ran `terraform apply`):
+The `jump_server_public_ips` and `ssh_command_jump_1` / `ssh_command_jump_2` outputs give you the addresses and ready-to-use SSH commands. Note: SSH ingress is only allowed from the public IP you ran the deployment from.
 
-```bash
-aws eks update-kubeconfig --region us-east-1 --name Monesh-Eks-Cluster
-kubectl get nodes
-```
+## Cluster add-ons (load balancing)
+
+1. Install [cert-manager](https://cert-manager.io/docs/), required for TLS certificates on controller webhooks:
+
+    ```bash
+    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.20.2/cert-manager.yaml
+    ```
+
+    Wait for all pods in the `cert-manager` namespace to be running.
+
+1. Tag the subnets so the LoadBalancer controller can identify them:
+
+    ```bash
+    ../resources/loadbalancer/tag-subnets.sh
+    ```
+
+1. Install the `IngressClass`:
+
+    ```bash
+    kubectl apply -f ../resources/loadbalancer/ingress-class.yaml
+    ```
+
+1. Install the load balancer controller:
+
+    ```bash
+    kubectl apply -f ../resources/loadbalancer/loadbalancer_v2_7_2_full.yaml
+    ```
+
+    Wait for the `aws-loadbalancer-controller` pod in the `kube-system` namespace to be running.
+
+1. (Optional) Install the sample 2048 game:
+
+    ```bash
+    kubectl apply -f ../resources/loadbalancer/2048-full.yaml
+    ```
+
+    Wait for the new load balancer to become `Active` in the [loadbalancers view](https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#LoadBalancers:), copy its DNS name, put `http://` in front and open it in your browser.
 
 ## Outputs
 
 | Output | Description |
 |---|---|
-| `cluster_endpoint` | EKS API server endpoint |
-| `node_autoscaling_group` | Worker node autoscaling group |
+| `NodeInstanceRole` | Worker node IAM role ARN (needed for the aws-auth ConfigMap) |
+| `NodeAutoScalingGroup` | Worker node autoscaling group |
+| `NodeSecurityGroup` | Worker node security group |
 | `jump_server_public_ips` | Public IPs of the two jump servers |
 | `ssh_command_jump_1` / `ssh_command_jump_2` | Ready-to-use SSH commands |
 
 ## Clean up
 
+When finished, delete all resources to avoid unwanted charges (this is not a production-grade deployment):
+
 ```bash
-terraform destroy -auto-approve
+terraform destroy
 ```
+
+Type `yes` when prompted.

@@ -31,6 +31,14 @@ variable "cluster_role_name" {
   default     = "Monesh-Eks-Cluster-Role"
 }
 
+# This variable is initialized as an environment variable source
+# by check-environment.sh if it is required to be "true"
+variable "use_predefined_role" {
+  type        = bool
+  description = "Whether to use predefined cluster service role, or create one."
+  default     = false
+}
+
 # Worker node IAM role name
 variable "node_role_name" {
   type        = string
