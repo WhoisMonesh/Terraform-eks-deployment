@@ -25,6 +25,41 @@ The repository layout mirrors the KodeKloud course:
 
 **IMPORTANT**: Ensure that all resources are created in the `us-east-1` (N. Virginia) region.
 
+### One-shot deploy (recommended)
+
+`deploy.sh` automates the entire workflow below in a single command. It fixes
+the two most common CloudShell problems for you:
+
+- **`terraform: command not found`** — Terraform is downloaded and installed
+  automatically to `/tmp` if it is missing (kubectl too).
+- **`no space left on device` on `terraform init`** — in CloudShell it sets
+  `TF_DATA_DIR=/tmp/tfdata` so the providers are stored on the larger `/tmp`
+  partition instead of the small home directory.
+
+It then runs the pre-flight checks, `terraform init` / `plan` / `apply`, sets
+up `kubeconfig`, and joins the worker nodes.
+
+```bash
+git clone https://github.com/WhoisMonesh/Terraform-eks-deployment
+cd Terraform-eks-deployment
+bash deploy.sh            # full deploy
+```
+
+Subcommands:
+
+| Command | What it does |
+|---|---|
+| `bash deploy.sh` | Install tools if needed, plan + apply, join worker nodes |
+| `bash deploy.sh plan` | Pre-flight checks + `terraform plan` only |
+| `bash deploy.sh nodes` | Set up kubeconfig + join the worker nodes |
+| `bash deploy.sh addons` | Install cert-manager + AWS LoadBalancer controller + 2048 game manifests |
+| `bash deploy.sh destroy` | Destroy all resources |
+
+Set `AUTO_APPROVE=true` (e.g. `AUTO_APPROVE=true bash deploy.sh`) to skip the
+confirmation prompts. Run from anywhere; the script `cd`s into `eks/` itself.
+
+### Manual deploy
+
 1. Clone the repository
 
     ```bash
