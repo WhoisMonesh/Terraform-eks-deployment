@@ -7,7 +7,8 @@
 #  TF_DATA_DIR at /tmp because CloudShell's home partition is too small for
 #  the Terraform providers, then runs the full KodeKloud-style workflow:
 #  pre-flight checks -> terraform init -> plan -> apply -> kubeconfig ->
-#  join the worker nodes.
+#  join the worker nodes. AWS CLI calls are retried automatically to ride out
+#  CloudShell's occasional credential-broker 500 errors.
 #
 #  Usage:
 #     bash deploy.sh            Full deploy (install tools, plan, apply, join nodes)
@@ -40,6 +41,21 @@ err()  { printf '\033[0;31m[deploy]\033[0m %s\n' "$*" >&2; exit 1; }
 
 require() {
   command -v "$1" >/dev/null 2>&1
+}
+
+# CloudShell's credential broker occasionally returns a 500 when fetching
+# container-role credentials. Retry the call a few times before giving up.
+aws_retry() {
+  local n=0
+  until aws "$@"; do
+    n=$((n + 1))
+    if [[ $n -ge 6 ]]; then
+      warn "aws call failed after $n attempts: aws $*"
+      return 1
+    fi
+    warn "aws call failed (attempt $n/6) - retrying in 10s ..."
+    sleep 10
+  done
 }
 
 install_terraform() {
@@ -94,20 +110,20 @@ preflight() {
   export AWS_DEFAULT_REGION="$REGION"
 
   local current
-  current="$(aws configure get region 2>/dev/null || true)"
+  current="$(aws_retry configure get region 2>/dev/null || true)"
   if [[ "$current" != "$REGION" ]]; then
     warn "Default AWS region is '${current:-unset}' - forcing region to $REGION for this run."
   fi
 
   local vpc igw
-  vpc="$(aws ec2 describe-vpcs --region "$REGION" --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text)"
+  vpc="$(aws_retry ec2 describe-vpcs --region "$REGION" --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text)"
   [[ "$vpc" != "None" ]] || err "No default VPC found in $REGION."
   ok "Using default VPC: $vpc"
-  igw="$(aws ec2 describe-internet-gateways --region "$REGION" --filters "Name=attachment.vpc-id,Values=$vpc" --query "InternetGateways[0].InternetGatewayId" --output text)"
+  igw="$(aws_retry ec2 describe-internet-gateways --region "$REGION" --filters "Name=attachment.vpc-id,Values=$vpc" --query "InternetGateways[0].InternetGatewayId" --output text)"
   [[ "$igw" != "None" ]] || err "Default VPC $vpc has no Internet Gateway attached."
   ok "Default VPC has Internet Gateway: $igw"
 
-  if aws iam get-role --role-name eksClusterRole >/dev/null 2>&1; then
+  if aws_retry iam get-role --role-name eksClusterRole >/dev/null 2>&1; then
     export TF_VAR_use_predefined_role=true
     ok "Using pre-existing role eksClusterRole"
   else
@@ -136,7 +152,7 @@ tf_apply() {
 
 join_nodes() {
   info "Setting up kubeconfig for $CLUSTER_NAME ..."
-  aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER_NAME"
+  aws_retry eks update-kubeconfig --region "$REGION" --name "$CLUSTER_NAME"
 
   local role_arn
   role_arn="$(terraform -chdir="$EKS_DIR" output -raw NodeInstanceRole)"
