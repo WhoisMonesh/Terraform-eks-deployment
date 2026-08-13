@@ -14,6 +14,7 @@
 #     bash deploy.sh plan       Pre-flight checks + terraform plan only
 #     bash deploy.sh nodes      Set up kubeconfig + join the worker nodes only
 #     bash deploy.sh addons     Install cert-manager + AWS LoadBalancer controller
+#     bash deploy.sh bastion    Deploy a bastion pod onto the management subnet
 #     bash deploy.sh destroy    Destroy all resources
 #
 #  Options:
@@ -183,6 +184,18 @@ addons() {
   ok "Add-ons installed. Optional: kubectl apply -f $ROOT/resources/loadbalancer/2048-full.yaml"
 }
 
+bastion() {
+  local subnet_tag="${BASTION_SUBNET_TAG:-management}"
+  info "Labelling nodes by subnet Name tag ..."
+  bash "$ROOT/resources/bastion/label-nodes-by-subnet.sh"
+  info "Deploying bastion pod onto subnet tag '$subnet_tag' ..."
+  sed "s/replace-with-subnet-tag/$subnet_tag/" "$ROOT/resources/bastion/bastion.yaml" | kubectl apply -f -
+  kubectl -n kube-system rollout status deployment/bastion --timeout=300s || true
+  kubectl -n kube-system get pod -l app=bastion
+  ok "Bastion pod deployed on the $subnet_tag subnet."
+  ok "Interactive shell: kubectl -n kube-system exec -it deploy/bastion -- bash"
+}
+
 destroy() {
   info "terraform destroy ..."
   local flag=()
@@ -225,11 +238,15 @@ case "$CMD" in
     preflight
     addons
     ;;
+  bastion)
+    preflight
+    bastion
+    ;;
   destroy)
     preflight
     destroy
     ;;
   *)
-    err "Unknown command: $CMD (use: deploy | plan | nodes | addons | destroy)"
+    err "Unknown command: $CMD (use: deploy | plan | nodes | addons | bastion | destroy)"
     ;;
 esac

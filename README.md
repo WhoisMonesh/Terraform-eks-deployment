@@ -33,6 +33,7 @@ The script runs the pre-flight checks, `terraform init` / `plan` / `apply`, crea
 | `bash deploy.sh plan` | Pre-flight checks + `terraform plan` only |
 | `bash deploy.sh nodes` | Set up kubeconfig + join the worker nodes |
 | `bash deploy.sh addons` | Install cert-manager + AWS LoadBalancer controller + sample 2048 game |
+| `bash deploy.sh bastion` | Deploy a bastion pod onto the management subnet nodes |
 | `bash deploy.sh destroy` | Destroy all resources |
 
 - Set `AUTO_APPROVE=true` (e.g. `AUTO_APPROVE=true bash deploy.sh`) to skip the confirmation prompts.
@@ -67,6 +68,39 @@ Installed with `bash deploy.sh addons`:
 
 Once the load balancer for the 2048 game is `Active` in the [loadbalancers view](https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#LoadBalancers:), copy its DNS name, put `http://` in front and open it in your browser.
 
+## Bastion pod (management subnet)
+
+`bash deploy.sh bastion` deploys a **Kubernetes bastion pod** — a `kubectl` +
+AWS CLI shell that runs *inside* the cluster, pinned to the nodes in your
+**management subnet**. Because it inherits the worker node IAM role, it has the
+same cluster access as the jump servers (the node role is mapped in the
+`aws-auth` ConfigMap).
+
+How it works:
+
+1. `resources/bastion/label-nodes-by-subnet.sh` labels every worker node with
+   `bastion-subnet=<Name tag of the subnet its instance is in>`.
+2. `resources/bastion/bastion.yaml` is applied with a `nodeSelector` of
+   `bastion-subnet: management`, so the pod only lands on management-subnet nodes.
+
+To target a different subnet name tag:
+
+```bash
+BASTION_SUBNET_TAG=my-management-tag bash deploy.sh bastion
+```
+
+Interact with the bastion:
+
+```bash
+kubectl -n kube-system exec -it deploy/bastion -- bash   # inside the cluster
+kubectl get nodes
+aws eks update-kubeconfig --region us-east-1 --name Monesh-Eks-Cluster
+```
+
+Requires the nodes to have been joined first (`bash deploy.sh` or
+`bash deploy.sh nodes`), and your worker nodes' subnets must carry a `Name`
+tag (the tag value becomes the `bastion-subnet` label).
+
 ## Outputs
 
 `terraform output` (also printed at the end of `deploy.sh`):
@@ -92,7 +126,9 @@ The apply also generates an SSH keypair and saves the private key to `~/.ssh/eks
 │   │   ├── create-service-role/ # Creates the EKS service role
 │   │   └── use-service-role/    # Reuses an existing EKS service role
 │   └── *.tf                     # Terraform resources
-└── resources/loadbalancer/      # LoadBalancer controller + test app manifests
+└── resources/
+    ├── bastion/            # Bastion pod manifest + subnet labeling script
+    └── loadbalancer/       # LoadBalancer controller + test app manifests
 ```
 
 ## Manual deploy (reference)

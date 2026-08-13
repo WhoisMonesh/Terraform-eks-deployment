@@ -1,0 +1,66 @@
+# Bastion pod for the EKS cluster.
+#
+# Runs a kubectl + AWS CLI shell inside the cluster, scheduled onto the nodes
+# in the management subnet. It inherits the worker node IAM role, so it has
+# the same cluster access as the jump servers (aws-auth maps the node role).
+#
+# Scheduling: nodes are labelled bastion-subnet=<Name tag of their subnet> by
+# label-nodes-by-subnet.sh. The nodeSelector below targets the management
+# subnet. deploy.sh replaces "replace-with-subnet-tag" at apply time, or edit
+# it here to match your management subnet Name tag.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bastion
+  namespace: kube-system
+  labels:
+    app: bastion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bastion
+  template:
+    metadata:
+      labels:
+        app: bastion
+    spec:
+      nodeSelector:
+        bastion-subnet: replace-with-subnet-tag
+      initContainers:
+        - name: fetch-kubectl
+          image: amazon/aws-cli:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              export PATH=$PATH:/tools
+              VERSION=$(curl -fsSL https://dl.k8s.io/release/stable.txt)
+              curl -fsSLO "https://dl.k8s.io/release/${VERSION}/bin/linux/amd64/kubectl"
+              chmod +x kubectl
+              mv kubectl /tools/kubectl
+          volumeMounts:
+            - name: tools
+              mountPath: /tools
+      containers:
+        - name: bastion
+          image: amazon/aws-cli:latest
+          command: ["sh", "-c"]
+          args:
+            - |
+              export PATH=$PATH:/tools
+              aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER_NAME"
+              echo "Bastion ready. Nodes:"
+              kubectl get nodes
+              echo "Interactive shell: kubectl -n kube-system exec -it deploy/bastion -- bash"
+              sleep infinity
+          env:
+            - name: REGION
+              value: us-east-1
+            - name: CLUSTER_NAME
+              value: Monesh-Eks-Cluster
+          volumeMounts:
+            - name: tools
+              mountPath: /tools
+      volumes:
+        - name: tools
+          emptyDir: {}
