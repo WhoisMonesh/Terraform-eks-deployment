@@ -1,0 +1,12 @@
+# Normalize line endings so shell scripts stay runnable everywhere.
+# Bash on Linux/CloudShell fails on CRLF ("bad interpreter" / $'\r' errors),
+# so text files are forced to LF in the repo and on checkout.
+* text=auto eol=lf
+
+# Windows-only scripts conventionally use CRLF
+*.ps1 text eol=crlf
+
+# Binary assets
+*.pem binary
+*.zip binary
+*.png binary

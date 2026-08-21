@@ -81,7 +81,8 @@ install_kubectl() {
   uname_m="$(uname -m)"
   case "$uname_s" in darwin) uname_s="darwin" ;; linux) uname_s="linux" ;; esac
   case "$uname_m" in x86_64|amd64) uname_m="amd64" ;; aarch64|arm64) uname_m="arm64" ;; esac
-  kb_version="$(curl -fsSL https://dl.k8s.io/release/stable.txt 2>/dev/null || echo v1.31.0)"
+  # Keep in sync with eks/variables.tf cluster_version (kubectl/server skew policy)
+  kb_version="v1.31.0"
   mkdir -p "$KB_INSTALL_DIR"
   curl -fsSLo "$KB_INSTALL_DIR/kubectl" \
     "https://dl.k8s.io/release/${kb_version}/bin/${uname_s}/${uname_m}/kubectl"
@@ -147,7 +148,8 @@ tf_apply() {
   info "terraform apply ... (this can take up to 10 minutes)"
   local flag=()
   if [[ "${AUTO_APPROVE:-false}" == "true" ]]; then flag+=(-auto-approve); fi
-  terraform -chdir="$EKS_DIR" apply "${flag[@]:-}"
+  # ${flag[@]+...} avoids passing an empty-string argument when AUTO_APPROVE is unset
+  terraform -chdir="$EKS_DIR" apply ${flag[@]+"${flag[@]}"}
 }
 
 join_nodes() {
@@ -216,7 +218,7 @@ destroy() {
   info "terraform destroy ..."
   local flag=()
   if [[ "${AUTO_APPROVE:-false}" == "true" ]]; then flag+=(-auto-approve); fi
-  terraform -chdir="$EKS_DIR" destroy "${flag[@]:-}"
+  terraform -chdir="$EKS_DIR" destroy ${flag[@]+"${flag[@]}"}
   ok "Cleanup complete"
 }
 

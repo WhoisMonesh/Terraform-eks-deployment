@@ -197,15 +197,14 @@ resource "aws_launch_template" "node_launch_template" {
     }
   }
 
+  # IMPORTANT: the heredoc body must not be indented. cloud-init only treats
+  # user_data as a shell script when it starts with "#!" at the very first
+  # character, so leading whitespace would silently disable node bootstrap.
   user_data = base64encode(<<EOF
-    #!/bin/bash
-    set -o xtrace
-    /etc/eks/bootstrap.sh ${var.cluster_name}
-    /opt/aws/bin/cfn-signal --exit-code $? \
-                --stack  ${var.cluster_name}-stack \
-                --resource NodeGroup  \
-                --region ${var.aws_region}
-    EOF
+#!/bin/bash
+set -o xtrace
+/etc/eks/bootstrap.sh ${var.cluster_name}
+EOF
   )
 }
 

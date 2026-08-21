@@ -5,7 +5,7 @@ set -euo pipefail
 echo "Tagging subnets for Kubernetes ELB integration..."
 
 VPC_ID=$(aws ec2 describe-vpcs \
-  --filters Name=is-default,Values=true \
+  --filters Name=isDefault,Values=true \
   --query 'Vpcs[0].VpcId' \
   --output text)
 

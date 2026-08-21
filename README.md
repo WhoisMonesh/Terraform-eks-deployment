@@ -32,7 +32,7 @@ The script runs the pre-flight checks, `terraform init` / `plan` / `apply`, crea
 | `bash deploy.sh` | Install tools if needed, plan + apply, join worker nodes |
 | `bash deploy.sh plan` | Pre-flight checks + `terraform plan` only |
 | `bash deploy.sh nodes` | Set up kubeconfig + join the worker nodes |
-| `bash deploy.sh addons` | Install cert-manager + AWS LoadBalancer controller + sample 2048 game |
+| `bash deploy.sh addons` | Install cert-manager + AWS LoadBalancer controller (prints the command for the optional 2048 game) |
 | `bash deploy.sh bastion` | Deploy a bastion pod onto the management subnet nodes |
 | `bash deploy.sh destroy` | Destroy all resources |
 

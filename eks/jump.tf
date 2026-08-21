@@ -80,36 +80,39 @@ resource "aws_vpc_security_group_ingress_rule" "jump_server_to_master_443" {
 # The two jump servers. They install the AWS CLI and kubectl, then configure
 # kubeconfig so they can manage the cluster.
 resource "aws_instance" "jump_server" {
-  count                  = var.jump_server_count
-  ami                    = data.aws_ssm_parameter.jump_server_ami.value
-  instance_type          = var.jump_server_instance_type
-  subnet_id              = data.aws_subnets.public.ids[count.index]
-  key_name               = aws_key_pair.eks_kp.key_name
-  vpc_security_group_ids = [aws_security_group.jump_server_sg.id]
-  iam_instance_profile   = aws_iam_instance_profile.node_instance_profile.name
+  count                       = var.jump_server_count
+  ami                         = data.aws_ssm_parameter.jump_server_ami.value
+  instance_type               = var.jump_server_instance_type
+  subnet_id                   = data.aws_subnets.public.ids[count.index]
+  key_name                    = aws_key_pair.eks_kp.key_name
+  vpc_security_group_ids      = [aws_security_group.jump_server_sg.id]
+  iam_instance_profile        = aws_iam_instance_profile.node_instance_profile.name
   associate_public_ip_address = true
 
+  # IMPORTANT: the heredoc body must not be indented. cloud-init only treats
+  # user_data as a shell script when it starts with "#!" at the very first
+  # character, so leading whitespace would silently disable the setup script.
   user_data_base64 = base64encode(<<EOF
-    #!/bin/bash
-    set -o xtrace
+#!/bin/bash
+set -o xtrace
 
-    # Install AWS CLI v2
-    dnf install -y unzip > /dev/null
-    curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
-    unzip -q -o /tmp/awscliv2.zip -d /tmp/aws
-    /tmp/aws/install > /dev/null
+# Install AWS CLI v2
+dnf install -y unzip > /dev/null
+curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+unzip -q -o /tmp/awscliv2.zip -d /tmp/aws
+/tmp/aws/install > /dev/null
 
-    # Install kubectl matching the cluster version
-    curl -sLO "https://dl.k8s.io/release/v${var.cluster_version}.0/bin/linux/amd64/kubectl"
-    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+# Install kubectl matching the cluster version
+curl -sLO "https://dl.k8s.io/release/v${var.cluster_version}.0/bin/linux/amd64/kubectl"
+install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-    # Configure kubeconfig for the cluster
-    /usr/local/bin/aws eks update-kubeconfig \
-        --region ${var.aws_region} \
-        --name ${var.cluster_name}
+# Configure kubeconfig for the cluster
+/usr/local/bin/aws eks update-kubeconfig \
+    --region ${var.aws_region} \
+    --name ${var.cluster_name}
 
-    echo "Jump server ready for: kubectl get nodes"
-    EOF
+echo "Jump server ready for: kubectl get nodes"
+EOF
   )
 
   tags = {

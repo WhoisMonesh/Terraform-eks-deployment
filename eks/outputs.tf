@@ -45,9 +45,9 @@ output "jump_server_private_ips" {
 }
 
 output "ssh_command_jump_1" {
-  value = format("ssh -i ~/.ssh/eks-monesh.pem ec2-user@%s", aws_instance.jump_server[0].public_ip)
+  value = var.jump_server_count >= 1 ? format("ssh -i ~/.ssh/eks-monesh.pem ec2-user@%s", aws_instance.jump_server[0].public_ip) : null
 }
 
 output "ssh_command_jump_2" {
-  value = format("ssh -i ~/.ssh/eks-monesh.pem ec2-user@%s", aws_instance.jump_server[1].public_ip)
+  value = var.jump_server_count >= 2 ? format("ssh -i ~/.ssh/eks-monesh.pem ec2-user@%s", aws_instance.jump_server[1].public_ip) : null
 }
