@@ -1,0 +1,53 @@
+Version: "2012-10-17"
+Statement:
+  # Read-only actions (safe)
+  - Effect: Allow
+    Action:
+      - iam:ListServerCertificates
+      - iam:GetServerCertificate
+      - iam:ListRoles
+      - iam:ListPolicies
+      - iam:GetPolicy
+      - iam:GetPolicyVersion
+      - ec2:Describe*
+      - elasticloadbalancing:Describe*
+      - acm:ListCertificates
+      - acm:DescribeCertificate
+    Resource: "*"
+  # Required load balancer management actions (restricted to the current region)
+  - Effect: Allow
+    Action:
+      - elasticloadbalancing:CreateLoadBalancer
+      - elasticloadbalancing:CreateTargetGroup
+      - elasticloadbalancing:CreateListener
+      - elasticloadbalancing:CreateRule
+      - elasticloadbalancing:DeleteLoadBalancer
+      - elasticloadbalancing:DeleteTargetGroup
+      - elasticloadbalancing:DeleteListener
+      - elasticloadbalancing:DeleteRule
+      - elasticloadbalancing:RegisterTargets
+      - elasticloadbalancing:DeregisterTargets
+      - elasticloadbalancing:SetIpAddressType
+      - elasticloadbalancing:SetSecurityGroups
+      - elasticloadbalancing:SetSubnets
+      - elasticloadbalancing:ModifyLoadBalancerAttributes
+      - elasticloadbalancing:ModifyTargetGroup
+      - elasticloadbalancing:ModifyTargetGroupAttributes
+      - elasticloadbalancing:ModifyListener
+      - elasticloadbalancing:AddTags
+      - elasticloadbalancing:RemoveTags
+    Resource: "*"
+    Condition:
+      StringEquals:
+        aws:RequestedRegion: "ap-south-1"
+  # Required EC2 actions for security group and tag management (restricted)
+  - Effect: Allow
+    Action:
+      - ec2:AuthorizeSecurityGroupIngress
+      - ec2:RevokeSecurityGroupIngress
+      - ec2:CreateSecurityGroup
+      - ec2:CreateTags
+    Resource: "*"
+    Condition:
+      StringEquals:
+        aws:RequestedRegion: "ap-south-1"

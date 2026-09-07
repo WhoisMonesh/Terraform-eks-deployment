@@ -4,13 +4,13 @@ Deploys an Amazon EKS cluster named **Monesh-Eks-Cluster** following the same wo
 
 - EKS control plane with an *unmanaged* node group (deployed and joined manually, like the course)
 - IAM roles use the KodeKloud course names (`eksClusterRole`, `eksWorkerNodeRole`, `eksPolicy`) because the playground only allows `PassRole` on those roles
-- **Two jump servers (bastions)** `Monesh-Jump-Server-1` / `Monesh-Jump-Server-2` with `kubectl` access to the cluster
+- **Jump servers (bastions)** are enabled by default (`jump_server_count = 1`).
 - Load balancer + EBS CSI permissions policy for worker nodes
 - AWS LoadBalancer controller + sample 2048 game manifests under `resources/loadbalancer`
 
 ## Quick start (one-shot)
 
-**IMPORTANT**: All resources are created in `us-east-1` (N. Virginia).
+**IMPORTANT**: All resources are created in `ap-south-1` (Mumbai) by default.
 
 `deploy.sh` runs the entire workflow with a single command. It also fixes the two most common AWS CloudShell problems automatically:
 
@@ -43,7 +43,7 @@ The script runs the pre-flight checks, `terraform init` / `plan` / `apply`, crea
 ## Connect to the cluster
 
 ```bash
-aws eks update-kubeconfig --region us-east-1 --name Monesh-Eks-Cluster
+aws eks update-kubeconfig --region ap-south-1 --name Monesh-Eks-Cluster
 kubectl get nodes
 ```
 
@@ -66,7 +66,7 @@ Installed with `bash deploy.sh addons`:
 4. AWS LoadBalancer controller
 5. (Optional) sample 2048 game
 
-Once the load balancer for the 2048 game is `Active` in the [loadbalancers view](https://us-east-1.console.aws.amazon.com/ec2/home?region=us-east-1#LoadBalancers:), copy its DNS name, put `http://` in front and open it in your browser.
+Once the load balancer for the 2048 game is `Active` in the [loadbalancers view](https://ap-south-1.console.aws.amazon.com/ec2/home?region=ap-south-1#LoadBalancers:), copy its DNS name, put `http://` in front and open it in your browser.
 
 ## Bastion pod (management subnet)
 
@@ -94,7 +94,7 @@ Interact with the bastion:
 ```bash
 kubectl -n kube-system exec -it deploy/bastion -- bash   # inside the cluster
 kubectl get nodes
-aws eks update-kubeconfig --region us-east-1 --name Monesh-Eks-Cluster
+aws eks update-kubeconfig --region ap-south-1 --name Monesh-Eks-Cluster
 ```
 
 Requires the nodes to have been joined first (`bash deploy.sh` or
@@ -139,7 +139,7 @@ For a step-by-step walkthrough, or if you prefer not to use `deploy.sh`:
 
     ```bash
     aws configure
-    # Access Key ID, Secret Access Key, region = us-east-1, output = json
+    # Access Key ID, Secret Access Key, region = ap-south-1, output = json
     ```
 
 1. Run the environment check. It verifies the region, default VPC, internet gateway and pre-existing roles, and sets the Terraform variables accordingly.
@@ -170,7 +170,7 @@ For a step-by-step walkthrough, or if you prefer not to use `deploy.sh`:
 1. Join the worker nodes:
 
     ```bash
-    aws eks update-kubeconfig --region us-east-1 --name Monesh-Eks-Cluster
+    aws eks update-kubeconfig --region ap-south-1 --name Monesh-Eks-Cluster
     curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/aws-auth-cm.yaml
     ```
 

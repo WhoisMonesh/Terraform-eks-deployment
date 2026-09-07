@@ -35,7 +35,7 @@ resource "aws_iam_policy" "jump_server_policy" {
 
 resource "aws_iam_role_policy_attachment" "jump_server_cluster_access" {
   policy_arn = aws_iam_policy.jump_server_policy.arn
-  role       = aws_iam_role.node_instance_role.name
+  role       = data.aws_iam_role.node_instance_role.name
 }
 
 # Security group for the jump servers
@@ -96,14 +96,20 @@ resource "aws_instance" "jump_server" {
 #!/bin/bash
 set -o xtrace
 
-# Install AWS CLI v2
-dnf install -y unzip > /dev/null
-curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
-unzip -q -o /tmp/awscliv2.zip -d /tmp/aws
+# Install AWS CLI v2 with checksum verification
+yum install -y unzip > /dev/null
+curl -sSLO "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+curl -sSLO "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip.sha256"
+# Verify checksum
+sha256sum -c awscli-exe-linux-x86_64.zip.sha256 || { echo "AWS CLI checksum verification failed" ; exit 1; }
+unzip -q -o awscli-exe-linux-x86_64.zip -d /tmp/aws
 /tmp/aws/install > /dev/null
 
-# Install kubectl matching the cluster version
-curl -sLO "https://dl.k8s.io/release/v${var.cluster_version}.0/bin/linux/amd64/kubectl"
+# Install kubectl matching the cluster version with checksum verification
+KUBECTL_URL="https://dl.k8s.io/release/v${var.cluster_version}.0/bin/linux/amd64/kubectl"
+curl -sSLO "$KUBECTL_URL"
+curl -sSLO "$${KUBECTL_URL}.sha256"
+sha256sum -c kubectl.sha256 || { echo "kubectl checksum verification failed" ; exit 1; }
 install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 # Configure kubeconfig for the cluster

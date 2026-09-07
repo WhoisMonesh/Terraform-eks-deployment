@@ -5,7 +5,7 @@
 ####################################################################
 
 output "NodeInstanceRole" {
-  value = aws_iam_role.node_instance_role.arn
+  value = data.aws_iam_role.node_instance_role.arn
 }
 
 output "NodeSecurityGroup" {
@@ -33,7 +33,7 @@ output "cluster_role_arn" {
 }
 
 output "jump_server_iam_role_arn" {
-  value = aws_iam_role.node_instance_role.arn
+  value = data.aws_iam_role.node_instance_role.arn
 }
 
 output "jump_server_public_ips" {

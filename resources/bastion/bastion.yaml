@@ -27,6 +27,10 @@ spec:
     spec:
       nodeSelector:
         bastion-subnet: replace-with-subnet-tag
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
       initContainers:
         - name: fetch-kubectl
           image: amazon/aws-cli:latest
@@ -34,8 +38,12 @@ spec:
           args:
             - |
               export PATH=$PATH:/tools
-              VERSION=$(curl -fsSL https://dl.k8s.io/release/stable.txt)
+              # Pin to a known stable version matching the cluster version
+              VERSION="v1.36.0"
               curl -fsSLO "https://dl.k8s.io/release/${VERSION}/bin/linux/amd64/kubectl"
+              # Verify SHA256 checksum
+              curl -fsSLO "https://dl.k8s.io/release/${VERSION}/bin/linux/amd64/kubectl.sha256"
+              echo "$(cat kubectl.sha256)  kubectl" | sha256sum -c - || { echo 'kubectl checksum verification failed' ; exit 1; }
               chmod +x kubectl
               mv kubectl /tools/kubectl
           volumeMounts:
@@ -55,7 +63,7 @@ spec:
               sleep infinity
           env:
             - name: REGION
-              value: us-east-1
+              value: ap-south-1
             - name: CLUSTER_NAME
               value: Monesh-Eks-Cluster
           volumeMounts:

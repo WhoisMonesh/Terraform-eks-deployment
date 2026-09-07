@@ -35,7 +35,7 @@ data "aws_subnets" "public" {
 
 # Get AMI ID for latest recommended Amazon Linux 2 image
 data "aws_ssm_parameter" "node_ami" {
-  name = "/aws/service/eks/optimized-ami/${var.cluster_version}/amazon-linux-2/recommended/image_id"
+  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }
 
 # Get AMI ID for the latest Amazon Linux 2023 image for the jump servers

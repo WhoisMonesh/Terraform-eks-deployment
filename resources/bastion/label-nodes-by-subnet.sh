@@ -9,7 +9,7 @@
 # =============================================================================
 set -euo pipefail
 
-REGION="${AWS_REGION:-us-east-1}"
+REGION="${AWS_REGION:-ap-south-1}"
 
 nodes="$(kubectl get nodes -o jsonpath='{.items[*].metadata.name}')"
 [[ -n "$nodes" ]] || { echo "No nodes found." >&2; exit 1; }

@@ -8,7 +8,7 @@ variable "cluster_role_name" {
 }
 
 data "aws_iam_role" "eksClusterRole" {
-    name = var.cluster_role_name
+  name = var.cluster_role_name
 }
 
 output "eksClusterRole_arn" {

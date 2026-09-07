@@ -27,16 +27,16 @@ if (-not $current_region) {
     $current_region = $Env:AWS_DEFAULT_REGION
 }
 
-if ($current_region -ne "us-east-1") {
+if ($current_region -ne "ap-south-1") {
     if ($current_region) {
-        Write-Host "The current region is $current_region. This must be deployed in us-east-1." -ForegroundColor Red
+        Write-Host "The current region is $current_region. This must be deployed in ap-south-1." -ForegroundColor Red
         return
     }
-    Write-Host "Unable to determine the current region. Use `aws configure` to set the default region to us-east-1." -ForegroundColor Red
+    Write-Host "Unable to determine the current region. Use `aws configure` to set the default region to ap-south-1." -ForegroundColor Red
     return
 }
 
-Write-Host "- Running in correct region: us-east-1" -ForegroundColor Green
+Write-Host "- Running in correct region: ap-south-1" -ForegroundColor Green
 
 # Get default VPC
 $VPC_ID = aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text

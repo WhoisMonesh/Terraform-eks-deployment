@@ -1,0 +1,69 @@
+name: Deploy EKS (ap-south-1)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'eks/**'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    env:
+      TF_VAR_aws_region: ap-south-1
+      TF_VAR_jump_server_count: 2
+      TF_VAR_cluster_version: "1.36"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: terraform
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-south-1
+          # Provide credentials via repository secrets (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, or use OIDC role)
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.8'
+
+      - name: Terraform Init
+        working-directory: ./eks
+        run: terraform init -input=false
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ./eks
+        run: |
+          terraform plan -out=tfplan
+          terraform show -no-color tfplan > plan.txt
+        continue-on-error: true
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tf-plan
+          path: ./eks/plan.txt
+
+      - name: Terraform Apply (auto-approve)
+        if: github.ref == 'refs/heads/main'
+        working-directory: ./eks
+        run: terraform apply -auto-approve tfplan
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region ap-south-1 --name Monesh-Eks-Cluster
+
+      - name: Deploy DevOps AI Copilot stack
+        run: |
+          kubectl apply -f devops-ai-copilot/deploy/k8s/configmap.yaml
+          kubectl apply -f devops-ai-copilot/deploy/k8s/secrets.yaml
+          kubectl apply -f devops-ai-copilot/deploy/k8s/ollama-deployment.yaml
+          kubectl apply -f devops-ai-copilot/deploy/k8s/agent-deployment.yaml
+          kubectl apply -f devops-ai-copilot/deploy/k8s/gui-deployment.yaml

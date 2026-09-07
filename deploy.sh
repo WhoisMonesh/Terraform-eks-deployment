@@ -23,7 +23,7 @@
 # =============================================================================
 set -euo pipefail
 
-REGION="${AWS_REGION:-us-east-1}"
+REGION="${AWS_REGION:-ap-south-1}"
 CLUSTER_NAME="Monesh-Eks-Cluster"
 TF_VERSION="1.9.8"
 TF_INSTALL_DIR="/tmp/tf-bin"
@@ -82,7 +82,7 @@ install_kubectl() {
   case "$uname_s" in darwin) uname_s="darwin" ;; linux) uname_s="linux" ;; esac
   case "$uname_m" in x86_64|amd64) uname_m="amd64" ;; aarch64|arm64) uname_m="arm64" ;; esac
   # Keep in sync with eks/variables.tf cluster_version (kubectl/server skew policy)
-  kb_version="v1.31.0"
+  kb_version="v1.36.0"
   mkdir -p "$KB_INSTALL_DIR"
   curl -fsSLo "$KB_INSTALL_DIR/kubectl" \
     "https://dl.k8s.io/release/${kb_version}/bin/${uname_s}/${uname_m}/kubectl"

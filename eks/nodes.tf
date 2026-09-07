@@ -37,42 +37,45 @@ data "aws_iam_policy_document" "assume_role_ec2" {
 }
 
 # IAM role to assign to worker nodes
-resource "aws_iam_role" "node_instance_role" {
-  name               = var.node_role_name
-  assume_role_policy = data.aws_iam_policy_document.assume_role_ec2.json
-  path               = "/"
+# NOTE: The node IAM role already exists (created manually or by a previous run).
+# We replace the managed resource with a data source so Terraform re‑uses the existing role.
+# This prevents Terraform from trying to create a duplicate role.
+
+data "aws_iam_role" "node_instance_role" {
+  name = var.node_role_name
 }
+# (Removed the original resource block)
 
 resource "aws_iam_role_policy_attachment" "node_instance_role_EKSWNP" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.node_instance_role.name
+  role       = data.aws_iam_role.node_instance_role.name
 }
 
 resource "aws_iam_role_policy_attachment" "node_instance_role_EKSCNIP" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.node_instance_role.name
+  role       = data.aws_iam_role.node_instance_role.name
 }
 
 resource "aws_iam_role_policy_attachment" "node_instance_role_EKSCRRO" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.node_instance_role.name
+  role       = data.aws_iam_role.node_instance_role.name
 }
 
 resource "aws_iam_role_policy_attachment" "node_instance_role_SSMMIC" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  role       = aws_iam_role.node_instance_role.name
+  role       = data.aws_iam_role.node_instance_role.name
 }
 
 resource "aws_iam_role_policy_attachment" "node_instance_role_loadbalancer" {
   policy_arn = aws_iam_policy.loadbalancer_policy.arn
-  role       = aws_iam_role.node_instance_role.name
+  role       = data.aws_iam_role.node_instance_role.name
 }
 
 # Instance profile to associate above role with worker nodes
 resource "aws_iam_instance_profile" "node_instance_profile" {
   name = "MoneshNodeInstanceProfile"
   path = "/"
-  role = aws_iam_role.node_instance_role.id
+  role = data.aws_iam_role.node_instance_role.id
 }
 
 # Security group to apply to worker nodes
@@ -172,7 +175,7 @@ resource "aws_launch_template" "node_launch_template" {
   }
 
   key_name      = aws_key_pair.eks_kp.key_name
-  instance_type = "t3.medium"
+  instance_type = "t3.micro"
   vpc_security_group_ids = [
     aws_security_group.node_security_group.id
   ]
@@ -221,7 +224,13 @@ resource "time_sleep" "wait_30_seconds" {
 # as the terraform ASG resource does not support UpdatePolicy
 resource "aws_cloudformation_stack" "autoscaling_group" {
   depends_on = [
-    time_sleep.wait_30_seconds
+    time_sleep.wait_30_seconds,
+    aws_iam_role_policy_attachment.node_instance_role_EKSWNP,
+    aws_iam_role_policy_attachment.node_instance_role_EKSCNIP,
+    aws_iam_role_policy_attachment.node_instance_role_EKSCRRO,
+    aws_iam_role_policy_attachment.node_instance_role_SSMMIC,
+    aws_iam_role_policy_attachment.node_instance_role_loadbalancer,
+    aws_iam_role_policy_attachment.jump_server_cluster_access
   ]
   name          = "Monesh-eks-cluster-stack"
   template_body = <<EOF

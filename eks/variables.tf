@@ -7,7 +7,7 @@
 variable "aws_region" {
   type        = string
   description = "AWS region to deploy the cluster into"
-  default     = "us-east-1"
+  default     = "ap-south-1"
 }
 
 # Cluster must be called 'Monesh-Eks-Cluster'
@@ -21,7 +21,7 @@ variable "cluster_name" {
 variable "cluster_version" {
   type        = string
   description = "Kubernetes version of the EKS control plane"
-  default     = "1.31"
+  default     = "1.36"
 }
 
 # Cluster IAM service role name. The KodeKloud playground only allows
@@ -59,7 +59,7 @@ variable "additional_policy_name" {
 variable "jump_server_count" {
   type        = number
   description = "Number of jump servers (bastions) to create"
-  default     = 2
+  default     = 1
 }
 
 variable "jump_server_instance_type" {
@@ -71,7 +71,7 @@ variable "jump_server_instance_type" {
 variable "node_group_desired_capacity" {
   type        = number
   description = "Desired capacity of Node Group ASG."
-  default     = 2
+  default     = 1
 }
 
 variable "node_group_max_size" {

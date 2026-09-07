@@ -46,16 +46,16 @@ if [[ -z "$current_region" ]]; then
     current_region=$AWS_DEFAULT_REGION
 fi
 
-if [[ "$current_region" != "us-east-1" ]]; then
+if [[ "$current_region" != "ap-south-1" ]]; then
     if [[ -n "$current_region" ]]; then
-        echo -e "${RED}The current region is ${current_region}. This must be deployed in us-east-1.${NC}"
+        echo -e "${RED}The current region is ${current_region}. This must be deployed in ap-south-1.${NC}"
         return
     fi
-    echo "${RED}Unable to determine the current region. Use "aws configure" to set the default region to us-east-1.${NC}"
+    echo "${RED}Unable to determine the current region. Use "aws configure" to set the default region to ap-south-1.${NC}"
     return
 fi
 
-echo -e "- ${GREEN}Running in correct region: us-east-1${NC}"
+echo -e "- ${GREEN}Running in correct region: ap-south-1${NC}"
 
 VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text)
 
