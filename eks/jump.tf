@@ -35,7 +35,7 @@ resource "aws_iam_policy" "jump_server_policy" {
 
 resource "aws_iam_role_policy_attachment" "jump_server_cluster_access" {
   policy_arn = aws_iam_policy.jump_server_policy.arn
-  role       = data.aws_iam_role.node_instance_role.name
+  role       = aws_iam_role.node_instance_role.name
 }
 
 # Security group for the jump servers

@@ -35,7 +35,9 @@ data "aws_subnets" "public" {
 
 # Get AMI ID for latest recommended Amazon Linux 2 image
 data "aws_ssm_parameter" "node_ami" {
-  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+  # Use the EKS‑optimized Amazon Linux 2 AMI for the exact Kubernetes version.
+  # The SSM path expects the version with a dot (e.g. "1.30").
+  name = "/aws/service/eks/optimized-ami/${var.cluster_version}/amazon-linux-2/recommended/image_id"
 }
 
 # Get AMI ID for the latest Amazon Linux 2023 image for the jump servers

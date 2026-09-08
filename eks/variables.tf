@@ -21,7 +21,7 @@ variable "cluster_name" {
 variable "cluster_version" {
   type        = string
   description = "Kubernetes version of the EKS control plane"
-  default     = "1.36"
+  default     = "1.30"
 }
 
 # Cluster IAM service role name. The KodeKloud playground only allows
